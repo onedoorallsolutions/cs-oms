@@ -3,7 +3,6 @@ package com.cs.oms.common;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -13,7 +12,7 @@ public class OrderBook {
 	private volatile OrderBookStatus status = OrderBookStatus.NONE;
 	private final int instrumentId;
 	private final Set<Order> orders = new HashSet<>();
-	private Set<Order> invalidOrders = new HashSet<>();
+	private Set<Order> invalidOrders = null;
 	private Set<Execution> executions = new HashSet<>();
 	private volatile static boolean isFirstExecution = true;
 	private Order earliestOrder = null;
@@ -21,6 +20,7 @@ public class OrderBook {
 	private Order biggestOrder = null;
 	private Order smallestOrder = null;
 	private Map<Integer, Order> orderMap = new HashMap<>();
+	private Map<Double, Long> demandStatistics = new HashMap<>();
 
 	public OrderBook(int instrumentId) {
 		this.instrumentId = instrumentId;
@@ -45,7 +45,20 @@ public class OrderBook {
 					smallestOrder = order;
 				}
 			}
+			if (order.getOrderType() == OrderType.LIMIT) {
+				LimitOrder limitOrder = (LimitOrder) order;
+				double price = limitOrder.getPrice();
+				Long qtyForThisPrice = demandStatistics.get(price);
+				if (qtyForThisPrice == null) {
+					demandStatistics.put(price, limitOrder.getQuantity());
+				} else {
+					demandStatistics.put(price, qtyForThisPrice + limitOrder.getQuantity());
+				}
+
+			}
 			return true;
+		} else {
+			order.setStatus(OrderStatus.REJECTED);
 		}
 		return false;
 	}
@@ -158,7 +171,11 @@ public class OrderBook {
 	}
 
 	public long getInvalidOrderQuantity() {
-		return invalidOrders.stream().mapToLong(o -> o.getQuantity()).sum();
+		if (invalidOrders != null) {
+			return invalidOrders.stream().mapToLong(o -> o.getQuantity()).sum();
+		}
+
+		return 0;
 	}
 
 	public Order getOrderDetail(int orderId) {
@@ -180,5 +197,15 @@ public class OrderBook {
 	public Order getLatestOrder() {
 		return latestOrder;
 	}
+
+	public Map<Double, Long> getDemandStatistics() {
+		return demandStatistics;
+	}
+
+	public OrderBookStatus getStatus() {
+		return status;
+	}
+	
+	
 
 }
