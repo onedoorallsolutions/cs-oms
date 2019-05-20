@@ -1,15 +1,15 @@
 package com.cs.oms.common;
 
 public class Instrument {
-	private int id;
+	private long id;
 	private String symbol;
 
-	public Instrument(int id, String symbol) {
+	public Instrument(long id, String symbol) {
 		this.id = id;
 		this.symbol = symbol;
 	}
 
-	public int getId() {
+	public long getId() {
 		return id;
 	}
 

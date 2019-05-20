@@ -1,41 +1,91 @@
 package com.cs.oms.service.dao;
 
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
-
-import org.apache.log4j.Logger;
 
 import com.cs.oms.common.Execution;
 import com.cs.oms.common.Instrument;
-import com.cs.oms.common.LimitOrder;
-import com.cs.oms.common.MarketOrder;
 import com.cs.oms.common.Order;
 import com.cs.oms.common.OrderBook;
 
 public class OMSServiceDaoImpl implements OMSServiceDao {
-	private final static Logger logger = Logger.getLogger(OMSServiceDaoImpl.class);
-	private AtomicInteger instrumentIds = new AtomicInteger(1);
-	private AtomicInteger orderIds = new AtomicInteger(1);
-	private AtomicInteger executionIds = new AtomicInteger(1);
+	private volatile static OMSServiceDaoImpl theInstance = null;
+	private Set<Order> orders = new HashSet<>();
+	private Set<OrderBook> orderBooks = new HashSet<>();
+	private Set<Execution> executions = new HashSet<>();
 	private Map<String, Instrument> instrumentMap = new HashMap<>();
-	private Map<Integer, OrderBook> orderBooks = new HashMap<>();
-	private Map<Integer, Order> orders = new HashMap<>();
+
+	private OMSServiceDaoImpl() {
+
+	}
 
 	@Override
-	public boolean createInstrument(String symbol) {
-		if (instrumentMap.containsKey(symbol)) {
-			logger.error("Instrument Alredy Loaded for Symbol:" + symbol);
-			return false;
+	public void save(Order order) {
+		orders.add(order);
+	}
+
+	@Override
+	public void update(Order order) {
+		if (orders.contains(order)) {
+			orders.add(order);
 		}
-		int id = instrumentIds.getAndIncrement();
-		Instrument instrument = new Instrument(id, symbol);
-		instrumentMap.put(symbol, instrument);
 
-		return true;
+	}
 
+	@Override
+	public void save(Execution execution) {
+		executions.add(execution);
+	}
+
+	@Override
+	public void update(OrderBook orderBook) {
+		if (orderBooks.contains(orderBooks)) {
+			orderBooks.add(orderBook);
+		}
+	}
+
+	@Override
+	public void save(OrderBook orderBook) {
+		orderBooks.add(orderBook);
+	}
+
+	@Override
+	public Set<Execution> getExecutions(long instrumentId) {
+		return executions.stream().filter(e -> e.getInstrumentId() == instrumentId)
+				.collect(Collectors.toSet());
+	}
+
+	@Override
+	public Set<Order> getOrders(long instrumentId) {
+		return orders.stream().filter(o -> o.getInstrumentId() == instrumentId)
+				.collect(Collectors.toSet());
+	}
+
+	public static OMSServiceDaoImpl getInstance() {
+		if (theInstance == null) {
+			synchronized (OMSServiceDaoImpl.class) {
+				if (theInstance == null) {
+					theInstance = new OMSServiceDaoImpl();
+				}
+			}
+		}
+		return theInstance;
+	}
+
+	@Override
+	public OrderBook getOrderBook(long instrumentId) {
+		Optional<OrderBook> optional = orderBooks.stream().filter(e -> e.getInstrumentId() == instrumentId)
+				.findFirst();
+
+		if (optional.isPresent()) {
+			return optional.get();
+		} else {
+			return null;
+		}
 	}
 
 	@Override
@@ -44,149 +94,17 @@ public class OMSServiceDaoImpl implements OMSServiceDao {
 	}
 
 	@Override
-	public List<Instrument> getAllInstrument() {
-		return instrumentMap.values().stream().collect(Collectors.toList());
-	}
-
-	@Override
-	public OrderBook createOrderBook(String symbol) {
-		Instrument instrument = instrumentMap.get(symbol);
-		if (instrument == null) {
-			logger.error("Can not create Order book as Symbol does not exists");
-			return null;
-		}
-
-		OrderBook orderBook = new OrderBook(instrument.getId());
-		orderBooks.put(instrument.getId(), orderBook);
-		return orderBook;
-
-	}
-
-	@Override
-	public OrderBook getOrderBook(int instrumentId) {
-		return fetchOrderBook(instrumentId);
-	}
-
-	@Override
-	public Order createLimitOrder(int instrumentId, long quantity, double price) {
-		OrderBook orderBook = fetchOrderBook(instrumentId);
-		if (orderBook != null) {
-			int id = orderIds.getAndIncrement();
-			LimitOrder limitOrder = new LimitOrder(id, instrumentId, quantity, price);
-			orders.put(id, limitOrder);
-			orderBook.addOrder(limitOrder);
-			return limitOrder;
+	public Order getOrder(long orderId) {
+		Optional<Order> optional = orders.stream().filter(o -> o.getId() == orderId).findAny();
+		if (optional.isPresent()) {
+			return optional.get();
 		}
 		return null;
-
 	}
 
 	@Override
-	public Order createMarketOrder(int instrumentId, long quantity) {
-		OrderBook orderBook = fetchOrderBook(instrumentId);
-		if (orderBook != null) {
-			int id = orderIds.getAndIncrement();
-			MarketOrder marketOrder = new MarketOrder(id, instrumentId, quantity);
-			orders.put(id, marketOrder);
-			orderBook.addOrder(marketOrder);
-			return marketOrder;
-		}
-		return null;
-
+	public void loadAllInstrument(Map<String, Instrument> instrumentMap) {
+		this.instrumentMap.putAll(instrumentMap);
 	}
 
-	@Override
-	public boolean openOrdersBook(int instrumentId) {
-		OrderBook orderbook = fetchOrderBook(instrumentId);
-		if (orderbook != null)
-			return orderbook.open();
-		return false;
-	}
-
-	@Override
-	public boolean closeOrdersBook(int instrumentId) {
-		OrderBook orderbook = fetchOrderBook(instrumentId);
-		if (orderbook != null)
-			return orderbook.close();
-		return false;
-	}
-
-	@Override
-	public long getAllValidOrdersQuantity(int instrumentId) {
-		OrderBook orderbook = fetchOrderBook(instrumentId);
-		if (orderbook != null)
-			return orderbook.getValidOrderQuantity();
-		return 0;
-	}
-
-	@Override
-	public long getAllInvalidOrdersQuantity(int instrumentId) {
-		OrderBook orderbook = fetchOrderBook(instrumentId);
-		if (orderbook != null)
-			return orderbook.getInvalidOrderQuantity();
-		return 0;
-	}
-
-	@Override
-	public Order getOrderDetail(int orderId) {
-		return orders.get(orderId);
-	}
-
-	@Override
-	public Order getBiggestOrder(int instrumentId) {
-		OrderBook orderbook = fetchOrderBook(instrumentId);
-		if (orderbook != null)
-			return orderbook.getBiggestOrder();
-		return null;
-
-	}
-
-	@Override
-	public Order getSmallestOrder(int instrumentId) {
-		OrderBook orderbook = fetchOrderBook(instrumentId);
-		if (orderbook != null)
-			return orderbook.getSmallestOrder();
-		return null;
-	}
-
-	@Override
-	public Order getEarliestOrder(int instrumentId) {
-		OrderBook orderbook = fetchOrderBook(instrumentId);
-		if (orderbook != null)
-			return orderbook.getEarliestOrder();
-		return null;
-	}
-
-	@Override
-	public Order getLatestOrder(int instrumentId) {
-		OrderBook orderbook = fetchOrderBook(instrumentId);
-		if (orderbook != null)
-			return orderbook.getLatestOrder();
-		return null;
-	}
-
-	@Override
-	public Map<Double, Long> getDemandStatistics(int instrumentId) {
-		OrderBook orderbook = fetchOrderBook(instrumentId);
-		if (orderbook != null)
-			return orderbook.getDemandStatistics();
-		return null;
-	}
-
-	private OrderBook fetchOrderBook(int instrumentId) {
-		OrderBook orderbook = orderBooks.get(instrumentId);
-		if (orderbook == null) {
-			logger.error("No Order Book Available for placing order for instrument:" + instrumentId);
-		}
-		return orderbook;
-	}
-
-	@Override
-	public boolean addExecution(int instrumentId, long quantity, double price) {
-		OrderBook orderbook = orderBooks.get(instrumentId);
-		if (orderbook != null) {
-			return orderbook.addExecution(new Execution(executionIds.getAndIncrement(), instrumentId, quantity, price));
-		}
-		return false;
-	}
 }

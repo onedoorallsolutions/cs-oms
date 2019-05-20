@@ -1,23 +1,25 @@
 package com.cs.oms.common;
 
-public class Execution {
-	private final int id;
-	private final int instrumentId;
-	private final long quantity;
-	private final double price;
+import java.math.BigDecimal;
 
-	public Execution(int id, int instrumentId, long quantity, double price) {
+public class Execution {
+	private final long id;
+	private final long instrumentId;
+	private final long quantity;
+	private final BigDecimal price;
+
+	public Execution(long id, long instrumentId, long quantity, BigDecimal price) {
 		this.id = id;
 		this.instrumentId = instrumentId;
 		this.quantity = quantity;
 		this.price = price;
 	}
 
-	public int getId() {
+	public long getId() {
 		return id;
 	}
 
-	public int getInstrumentId() {
+	public long getInstrumentId() {
 		return instrumentId;
 	}
 
@@ -25,8 +27,42 @@ public class Execution {
 		return quantity;
 	}
 
-	public double getPrice() {
+	public BigDecimal getPrice() {
 		return price;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (int) (id ^ (id >>> 32));
+		result = prime * result + (int) (instrumentId ^ (instrumentId >>> 32));
+		result = prime * result + ((price == null) ? 0 : price.hashCode());
+		result = prime * result + (int) (quantity ^ (quantity >>> 32));
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Execution other = (Execution) obj;
+		if (id != other.id)
+			return false;
+		if (instrumentId != other.instrumentId)
+			return false;
+		if (price == null) {
+			if (other.price != null)
+				return false;
+		} else if (!price.equals(other.price))
+			return false;
+		if (quantity != other.quantity)
+			return false;
+		return true;
 	}
 
 	@Override
@@ -35,4 +71,6 @@ public class Execution {
 				+ "]";
 	}
 
+
+	
 }

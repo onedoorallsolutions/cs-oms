@@ -1,47 +1,24 @@
 package com.cs.oms.service.dao;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import com.cs.oms.common.Execution;
 import com.cs.oms.common.Instrument;
 import com.cs.oms.common.Order;
 import com.cs.oms.common.OrderBook;
 
 public interface OMSServiceDao {
-
-	boolean createInstrument(String symbol);
-	
+	void save(Order order);
+	void update(Order order);
+	void save(Execution execution);
+	void update(OrderBook orderBook);
+	void save(OrderBook orderBook);
+	Set<Execution> getExecutions(long instrumentId);
+	Set<Order> getOrders(long instrumentId);
+	OrderBook getOrderBook(long instrumentId);
 	Instrument getInstrument(String symbol);
-
-	List<Instrument> getAllInstrument();
-
-	OrderBook createOrderBook(String symbol);
+	Order getOrder(long orderId);
+	void loadAllInstrument(Map<String, Instrument> instrumentMap);
 	
-	OrderBook getOrderBook(int instrumentId);
-
-	Order createLimitOrder(int instrumentId, long quantity, double price);
-
-	Order createMarketOrder(int instrumentId, long quantity);
-	
-	boolean addExecution(int instrumentId, long quantity, double price);
-
-	boolean openOrdersBook(int instrumentId);
-
-	boolean closeOrdersBook(int instrumentId);
-
-	long getAllValidOrdersQuantity(int instrumentId);
-
-	long getAllInvalidOrdersQuantity(int instrumentId);
-
-	Order getOrderDetail(int orderId);
-
-	Order getBiggestOrder(int instrumentId);
-
-	Order getSmallestOrder(int instrumentId);
-
-	Order getEarliestOrder(int instrumentId);
-
-	Order getLatestOrder(int instrumentId);
-
-	Map<Double, Long> getDemandStatistics(int instrumentId);
 }

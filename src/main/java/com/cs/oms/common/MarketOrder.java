@@ -2,7 +2,7 @@ package com.cs.oms.common;
 
 public class MarketOrder extends Order {
 
-	public MarketOrder(int id, int instrumentId, long quantity) {
+	public MarketOrder(long id, long instrumentId, long quantity) {
 		super(OrderType.MARKET, id, instrumentId, quantity);
 
 	}
@@ -10,6 +10,6 @@ public class MarketOrder extends Order {
 
 	@Override
 	public String toString() {
-		return "MarketOrder [base class :" + super.toString() + "]";
+		return "MarketOrder [" + super.toString() + "]";
 	}
 }

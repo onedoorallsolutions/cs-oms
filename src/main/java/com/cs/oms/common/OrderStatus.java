@@ -1,5 +1,5 @@
 package com.cs.oms.common;
 
 public enum OrderStatus {
-	VALID, INVALID , REJECTED;
+	VALID, INVALID;
 }
