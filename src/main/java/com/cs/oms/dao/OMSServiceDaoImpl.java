@@ -217,7 +217,6 @@ public class OMSServiceDaoImpl implements OMSServiceDao {
 				orderBook.setStatus(orderBookStatus);
 
 			}
-			logger.info("Fetch Order Book Successfully");
 		} catch (Exception e) {
 			logger.error("Error in Fetching  the Order Book" + e);
 		}
@@ -324,7 +323,7 @@ public class OMSServiceDaoImpl implements OMSServiceDao {
 				psmt.setInt(1, BOOK_OPEN);
 				break;
 			default:
-				break;
+				throw new RuntimeException("Invalid Book Status");
 			}
 
 			psmt.setLong(2, orderBook.getInstrumentId());
