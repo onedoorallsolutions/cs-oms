@@ -49,5 +49,4 @@ public class OrderBook {
 		return "OrderBook [status=" + status + ", instrumentId=" + instrumentId + "]";
 	}
 
-
 }

@@ -9,10 +9,10 @@ public class Execution {
 	private final BigDecimal price;
 
 	public Execution(long id, long instrumentId, long quantity, BigDecimal price) {
-		this.id = id;
 		this.instrumentId = instrumentId;
 		this.quantity = quantity;
 		this.price = price;
+		this.id = id;
 	}
 
 	public long getId() {
@@ -71,6 +71,4 @@ public class Execution {
 				+ "]";
 	}
 
-
-	
 }

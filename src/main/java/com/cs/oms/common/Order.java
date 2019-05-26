@@ -7,17 +7,18 @@ public abstract class Order {
 	private final long id;
 	private final long instrumentId;
 	private final long quantity;
-	private final Instant entryDate = Instant.now();
+	private final Instant entryDate;
 	private final OrderType orderType;
 	private OrderStatus status = OrderStatus.VALID;
 	private long executedQuantity;
 	private BigDecimal executedPrice = BigDecimal.ZERO;
 
-	public Order(OrderType orderType, long id, long instrumentId, long quantity) {
-		this.orderType = orderType;
+	public Order(long id, OrderType orderType, long instrumentId, long quantity, Instant entryDate) {
 		this.id = id;
+		this.orderType = orderType;
 		this.instrumentId = instrumentId;
 		this.quantity = quantity;
+		this.entryDate = entryDate;
 	}
 
 	public long getId() {
@@ -93,5 +94,4 @@ public abstract class Order {
 				+ executedQuantity + ", executedPrice=" + executedPrice + "]";
 	}
 
-	
 }

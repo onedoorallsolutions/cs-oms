@@ -5,28 +5,23 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 
 import com.cs.oms.common.Execution;
 import com.cs.oms.common.Instrument;
 import com.cs.oms.common.LimitOrder;
-import com.cs.oms.common.MarketOrder;
 import com.cs.oms.common.Order;
 import com.cs.oms.common.OrderBook;
 import com.cs.oms.common.OrderBookStatus;
 import com.cs.oms.common.OrderStatus;
 import com.cs.oms.common.OrderType;
 import com.cs.oms.common.exception.OMSException;
-import com.cs.oms.service.dao.OMSServiceDao;
+import com.cs.oms.dao.OMSServiceDao;
 
 public class OMSServiceImpl implements OMSService {
 	private final static Logger logger = Logger.getLogger(OMSServiceImpl.class);
 	private OMSServiceDao omsServiceDao;
-	private AtomicLong orderIds = new AtomicLong(0);
-	private AtomicLong executionIds = new AtomicLong(0);
 
 	public OMSServiceDao getOmsServiceDao() {
 		return omsServiceDao;
@@ -37,15 +32,14 @@ public class OMSServiceImpl implements OMSService {
 	}
 
 	@Override
-	public boolean addLimitOrder(String symbol, long quantity, BigDecimal price) throws OMSException {
+	public boolean addOrder(String symbol, long quantity, BigDecimal price) throws OMSException {
 		Instrument instrument = omsServiceDao.getInstrument(symbol);
 		if (instrument != null) {
 			long instrumentId = instrument.getId();
 			OrderBook orderBook = omsServiceDao.getOrderBook(instrumentId);
 			if (orderBook != null && orderBook.getStatus() == OrderBookStatus.OPEN) {
-				Order order = new LimitOrder(orderIds.incrementAndGet(), instrumentId, quantity, price);
-				omsServiceDao.save(order);
-				return true;
+				if (omsServiceDao.createOrder(instrumentId, quantity, price))
+					return true;
 			}
 			throw new OMSException("Cannot Add Orders for Instrument:" + instrumentId);
 		}
@@ -53,15 +47,14 @@ public class OMSServiceImpl implements OMSService {
 	}
 
 	@Override
-	public boolean addMarketOrder(String symbol, long quantity) throws OMSException {
+	public boolean addOrder(String symbol, long quantity) throws OMSException {
 		Instrument instrument = omsServiceDao.getInstrument(symbol);
 		if (instrument != null) {
 			long instrumentId = instrument.getId();
 			OrderBook orderBook = omsServiceDao.getOrderBook(instrumentId);
 			if (orderBook != null && orderBook.getStatus() == OrderBookStatus.OPEN) {
-				Order order = new MarketOrder(orderIds.incrementAndGet(), instrumentId, quantity);
-				omsServiceDao.save(order);
-				return true;
+				if (omsServiceDao.createOrder(instrumentId, quantity))
+					return true;
 			}
 			throw new OMSException("Cannot Add Orders for Instrument:" + symbol);
 		}
@@ -75,10 +68,10 @@ public class OMSServiceImpl implements OMSService {
 			long instrumentId = instrument.getId();
 			OrderBook orderBook = omsServiceDao.getOrderBook(instrumentId);
 			if (orderBook != null && orderBook.getStatus() == OrderBookStatus.CLOSE) {
-				Execution execution = new Execution(executionIds.incrementAndGet(), instrumentId, quantity, price);
-				omsServiceDao.save(execution);
-				allocateExecution(orderBook, execution);
-				return true;
+				if (omsServiceDao.createExecution(instrumentId, quantity, price)) {
+					allocateExecution(orderBook, quantity, price);
+					return true;
+				}
 			}
 			throw new OMSException("Cannot Add Execution for Instrument:" + symbol);
 		}
@@ -86,20 +79,18 @@ public class OMSServiceImpl implements OMSService {
 		throw new OMSException("Instrument does not exixts for Symbol :" + symbol);
 	}
 
-	private void allocateExecution(OrderBook orderBook, Execution execution) {
+	private void allocateExecution(OrderBook orderBook, long executionQuantity, BigDecimal executionPrice) {
 		long instrumentId = orderBook.getInstrumentId();
-		long executionQuantity = execution.getQuantity();
-		BigDecimal executionPrice = execution.getPrice();
 		Set<Execution> executions = omsServiceDao.getExecutions(instrumentId);
 		if (executions.size() == 1) {
 			// First Execution
 			omsServiceDao.getOrders(orderBook.getInstrumentId()).stream().forEach(order -> {
 				if (order.getOrderType() == OrderType.LIMIT) {
 					LimitOrder limitOrder = (LimitOrder) order;
-					if (limitOrder.getPrice().compareTo(execution.getPrice()) < 0) {
+					if (limitOrder.getPrice().compareTo(executionPrice) < 0) {
 						limitOrder.setExecutedPrice(BigDecimal.ZERO);
 						limitOrder.setStatus(OrderStatus.INVALID);
-						omsServiceDao.update(limitOrder);
+						omsServiceDao.updateOrder(order);
 					}
 				}
 			});
@@ -114,15 +105,14 @@ public class OMSServiceImpl implements OMSService {
 			validOrders.stream().forEach(o -> {
 				o.setExecutedPrice(executionPrice);
 				o.setExecutedQuantity(o.getQuantity());
-				omsServiceDao.update(o);
+				omsServiceDao.updateOrder(o);
 			});
 
 			orderBook.setStatus(OrderBookStatus.EXECUTED);
-			omsServiceDao.update(orderBook);
+			omsServiceDao.updateOrderBook(orderBook);
 		} else {
 
 			validOrders.stream().forEach(o -> {
-
 				o.setExecutedPrice(executionPrice);
 				long executedQuantity = o.getExecutedQuantity();
 				long bidQty = o.getQuantity();
@@ -130,6 +120,7 @@ public class OMSServiceImpl implements OMSService {
 					long remBidQty = bidQty - executedQuantity;
 					long executedQty = Math.round(((double) executionQuantity / validRemaingOrderQuantity) * remBidQty);
 					o.setExecutedQuantity(executedQuantity + executedQty);
+					omsServiceDao.updateOrder(o);
 				}
 			});
 
@@ -145,12 +136,12 @@ public class OMSServiceImpl implements OMSService {
 			OrderBook orderBook = omsServiceDao.getOrderBook(instrumentId);
 			if (orderBook != null && orderBook.getStatus() == OrderBookStatus.OPEN) {
 				orderBook.setStatus(OrderBookStatus.CLOSE);
-				omsServiceDao.update(orderBook);
-				return true;
+				if (omsServiceDao.updateOrderBook(orderBook))
+					return true;
 			}
 			throw new OMSException("Cannot Close Order Book for Instrument:" + instrumentId);
 		}
-		throw new OMSException("Instrument does not exixts for Symbol :" + symbol);
+		throw new OMSException("Instrument does not exist for Symbol :" + symbol);
 	}
 
 	@Override
@@ -161,24 +152,20 @@ public class OMSServiceImpl implements OMSService {
 			long instrumentId = instrument.getId();
 			OrderBook orderBook = getOrderBook(symbol);
 			if (orderBook == null) {
-				omsServiceDao.save(new OrderBook(instrumentId));
-				return true;
+				if (omsServiceDao.createOrderBook(instrumentId))
+					return true;
 			}
 			throw new OMSException("Cannot Add Open Order Book for Instrument:" + symbol);
 		}
-		throw new OMSException("Instrument does not exixts for Symbol :" + symbol);
+		throw new OMSException("Instrument does not exist for Symbol :" + symbol);
 	}
 
 	public Set<Order> getAllValidOrder(long instrumentId) {
-		return omsServiceDao.getOrders(instrumentId).stream().filter(o -> {
-			return o.getStatus() == OrderStatus.VALID;
-		}).collect(Collectors.toSet());
+		return omsServiceDao.getValidOrders(instrumentId);
 	}
 
 	public Set<Order> getAllInvalidOrder(long instrumentId) {
-		return omsServiceDao.getOrders(instrumentId).stream().filter(o -> {
-			return o.getStatus() == OrderStatus.INVALID;
-		}).collect(Collectors.toSet());
+		return omsServiceDao.getInvalidOrders(instrumentId);
 	}
 
 	public long getValidOrderQuantity(long instrumentId) {
@@ -229,7 +216,7 @@ public class OMSServiceImpl implements OMSService {
 				table.put(limitOrder.getPrice(), qty);
 			}
 		});
-		
+
 		getAllInvalidOrder(instrumentId).stream().filter(o -> o.getOrderType() == OrderType.LIMIT).forEach(o -> {
 			LimitOrder limitOrder = (LimitOrder) o;
 			Long qty = table.get(limitOrder.getPrice());
@@ -309,7 +296,13 @@ public class OMSServiceImpl implements OMSService {
 			long instrumentId = instrument.getId();
 			return omsServiceDao.getOrderBook(instrumentId);
 		}
-		throw new OMSException("Instrument does not exixts for Symbol :" + symbol);
+		throw new OMSException("Instrument does not exist for Symbol :" + symbol);
+	}
+
+	@Override
+	public Instrument getInstrument(String symbol) {
+
+		return omsServiceDao.getInstrument(symbol);
 	}
 
 }
