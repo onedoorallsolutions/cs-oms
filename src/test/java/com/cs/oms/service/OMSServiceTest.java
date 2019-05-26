@@ -19,8 +19,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.cs.oms.common.Instrument;
+import com.cs.oms.common.Order;
 import com.cs.oms.common.OrderBook;
 import com.cs.oms.common.OrderBookStatus;
+import com.cs.oms.common.OrderType;
 import com.cs.oms.common.exception.OMSException;
 import com.cs.oms.common.util.db.ConnectionManager;
 import com.cs.oms.dao.OMSServiceDaoImpl;
@@ -107,6 +109,23 @@ public class OMSServiceTest {
 		}
 
 		assertTrue(isSuccess);
+
+		try {
+			Order order = omsService.getBiggestOrder("IBM.N");
+			assertEquals(130, order.getQuantity());
+			order = omsService.getSmallestOrder("IBM.N");
+			assertEquals(50, order.getQuantity());
+
+			order = omsService.getLatestOrder("APPL.N");
+			assertEquals(OrderType.MARKET, order.getOrderType());
+			assertEquals(120, order.getQuantity());
+
+			order = omsService.getEarliestOrder("APPL.N");
+			assertEquals(50, order.getQuantity());
+			assertEquals(OrderType.LIMIT, order.getOrderType());
+		} catch (OMSException e) {
+
+		}
 	}
 
 	@Test

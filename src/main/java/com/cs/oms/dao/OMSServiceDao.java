@@ -43,4 +43,12 @@ public interface OMSServiceDao {
 
 	Order getOrder(long orderId);
 
+	Order getBiggestOrder(long instrumentId);
+
+	Order getSmallestOrder(long instrumentId);
+
+	Order getEarliestOrder(long instrumentId);
+
+	Order getLatestOrder(long instrumentId);
+
 }

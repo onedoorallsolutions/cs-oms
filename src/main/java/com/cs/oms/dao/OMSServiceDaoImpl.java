@@ -43,6 +43,10 @@ public class OMSServiceDaoImpl implements OMSServiceDao {
 	private final String GET_ORDER_BOOK_QUERY = "SELECT * FROM ORDERBOOK WHERE INSTRUMENT_ID = ?";
 	private final String INSERT_ORDER_BOOK_QUERY = "INSERT INTO ORDERBOOK(INSTRUMENT_ID,BOOK_STATUS) VALUES (?,?)";
 	private final String UPDATE_ORDER_BOOK_QUERY = "UPDATE ORDERBOOK SET BOOK_STATUS = ? WHERE INSTRUMENT_ID = ?";
+	private final String GET_BIGGEST_ORDER_QUERY_BY_INSTRUMENT = "SELECT * FROM ORDERS WHERE QUANTITY = (SELECT MAX(QUANTITY) FROM ORDERS WHERE INSTRUMENT_ID = ?)";
+	private final String GET_SMALLEST_ORDER_QUERY_BY_INSTRUMENT = "SELECT * FROM ORDERS WHERE QUANTITY = (SELECT MIN(QUANTITY) FROM ORDERS WHERE INSTRUMENT_ID = ?)";
+	private final String GET_LATEST_ORDER_QUERY_BY_INSTRUMENT = "SELECT * FROM ORDERS WHERE ENTRY_TIMESTAMP = (SELECT MAX(ENTRY_TIMESTAMP) FROM ORDERS WHERE INSTRUMENT_ID = ?)";
+	private final String GET_EARLIEST_ORDER_QUERY_BY_INSTRUMENT = "SELECT * FROM ORDERS WHERE ENTRY_TIMESTAMP = (SELECT MIN(ENTRY_TIMESTAMP) FROM ORDERS WHERE INSTRUMENT_ID = ?)";
 
 	public OMSServiceDaoImpl(ConnectionManager connectionManager) {
 		this.connectionManager = connectionManager;
@@ -350,6 +354,74 @@ public class OMSServiceDaoImpl implements OMSServiceDao {
 			logger.error("Error Creating the Order Book " + e);
 		}
 		return false;
+	}
+
+	@Override
+	public Order getBiggestOrder(long instrumentId) {
+		Order order = null;
+		try (Connection con = connectionManager.getConnection();
+				PreparedStatement psmt = con.prepareStatement(GET_BIGGEST_ORDER_QUERY_BY_INSTRUMENT)) {
+			psmt.setLong(1, instrumentId);
+
+			ResultSet rs = psmt.executeQuery();
+			if (rs.next()) {
+				order = getOrderFromResultSet(rs);
+			}
+		} catch (SQLException e) {
+			logger.error("Error Fetching Biggeset Order " + e);
+		}
+		return order;
+	}
+
+	@Override
+	public Order getSmallestOrder(long instrumentId) {
+		Order order = null;
+		try (Connection con = connectionManager.getConnection();
+				PreparedStatement psmt = con.prepareStatement(GET_SMALLEST_ORDER_QUERY_BY_INSTRUMENT)) {
+			psmt.setLong(1, instrumentId);
+
+			ResultSet rs = psmt.executeQuery();
+			if (rs.next()) {
+				order = getOrderFromResultSet(rs);
+			}
+		} catch (SQLException e) {
+			logger.error("Error Fetching Smallest Order " + e);
+		}
+		return order;
+	}
+
+	@Override
+	public Order getLatestOrder(long instrumentId) {
+		Order order = null;
+		try (Connection con = connectionManager.getConnection();
+				PreparedStatement psmt = con.prepareStatement(GET_LATEST_ORDER_QUERY_BY_INSTRUMENT)) {
+			psmt.setLong(1, instrumentId);
+
+			ResultSet rs = psmt.executeQuery();
+			if (rs.next()) {
+				order = getOrderFromResultSet(rs);
+			}
+		} catch (SQLException e) {
+			logger.error("Error Fetching Latest Order " + e);
+		}
+		return order;
+	}
+
+	@Override
+	public Order getEarliestOrder(long instrumentId) {
+		Order order = null;
+		try (Connection con = connectionManager.getConnection();
+				PreparedStatement psmt = con.prepareStatement(GET_EARLIEST_ORDER_QUERY_BY_INSTRUMENT)) {
+			psmt.setLong(1, instrumentId);
+
+			ResultSet rs = psmt.executeQuery();
+			if (rs.next()) {
+				order = getOrderFromResultSet(rs);
+			}
+		} catch (SQLException e) {
+			logger.error("Error Fetching Earliest Order " + e);
+		}
+		return order;
 	}
 
 }

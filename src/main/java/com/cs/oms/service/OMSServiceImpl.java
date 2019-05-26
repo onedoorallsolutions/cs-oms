@@ -180,30 +180,6 @@ public class OMSServiceImpl implements OMSService {
 		return getAllValidOrder(instrumentId).stream().mapToLong(o -> o.getExecutedQuantity()).sum();
 	}
 
-	private Optional<Order> getBiggestOrder(long instrumentId) {
-		return getAllValidOrder(instrumentId).stream().max((o1, o2) -> {
-			return Long.valueOf(o1.getQuantity()).compareTo(o2.getQuantity());
-		});
-	}
-
-	private Optional<Order> getSmallestOrder(long instrumentId) {
-		return getAllValidOrder(instrumentId).stream().max((o1, o2) -> {
-			return Long.valueOf(o2.getQuantity()).compareTo(o1.getQuantity());
-		});
-	}
-
-	private Optional<Order> getLatestOrder(long instrumentId) {
-		return getAllValidOrder(instrumentId).stream().max((o1, o2) -> {
-			return o1.getEntryDate().compareTo(o2.getEntryDate());
-		});
-	}
-
-	private Optional<Order> getEarliestOrder(long instrumentId) {
-		return getAllValidOrder(instrumentId).stream().max((o1, o2) -> {
-			return o2.getEntryDate().compareTo(o1.getEntryDate());
-		});
-	}
-
 	private Map<BigDecimal, Long> getDemandStatisctics(long instrumentId) {
 		Map<BigDecimal, Long> table = new HashMap<>();
 		getAllValidOrder(instrumentId).stream().filter(o -> o.getOrderType() == OrderType.LIMIT).forEach(o -> {
@@ -243,30 +219,10 @@ public class OMSServiceImpl implements OMSService {
 				long validOrderQty = getValidOrderQuantity(instrumentId);
 				long invalidOrderQty = getInvalidOrderQuantity(instrumentId);
 				long totalExecutedOty = getValidExecutedQuantity(instrumentId);
-				Order latestOrder = null;
-				Order biggestOrder = null;
-				Order smallestOrder = null;
-				Order earliestOrder = null;
-				Optional<Order> optional = getLatestOrder(instrumentId);
-
-				if (optional.isPresent()) {
-					latestOrder = optional.get();
-				}
-
-				optional = getEarliestOrder(instrumentId);
-				if (optional.isPresent()) {
-					earliestOrder = optional.get();
-				}
-
-				optional = getBiggestOrder(instrumentId);
-				if (optional.isPresent()) {
-					biggestOrder = optional.get();
-				}
-
-				optional = getSmallestOrder(instrumentId);
-				if (optional.isPresent()) {
-					smallestOrder = optional.get();
-				}
+				Order latestOrder = omsServiceDao.getLatestOrder(instrumentId);
+				Order earliestOrder = omsServiceDao.getEarliestOrder(instrumentId);
+				Order biggestOrder = omsServiceDao.getBiggestOrder(instrumentId);
+				Order smallestOrder = omsServiceDao.getSmallestOrder(instrumentId);
 
 				logger.info("Valid Executed Qty :" + totalExecutedOty);
 				logger.info("Valid Order Qty :" + validOrderQty);
@@ -308,6 +264,43 @@ public class OMSServiceImpl implements OMSService {
 	public Instrument getInstrument(String symbol) {
 
 		return omsServiceDao.getInstrument(symbol);
+	}
+
+	@Override
+	public Order getBiggestOrder(String symbol) throws OMSException {
+		Instrument instrument = omsServiceDao.getInstrument(symbol);
+		if (instrument != null) {
+			return omsServiceDao.getBiggestOrder(instrument.getId());
+		}
+		throw new OMSException("Instrument does not exist for Symbol :" + symbol);
+	}
+
+	@Override
+	public Order getSmallestOrder(String symbol) throws OMSException {
+
+		Instrument instrument = omsServiceDao.getInstrument(symbol);
+		if (instrument != null) {
+			return omsServiceDao.getSmallestOrder(instrument.getId());
+		}
+		throw new OMSException("Instrument does not exist for Symbol :" + symbol);
+	}
+
+	@Override
+	public Order getLatestOrder(String symbol) throws OMSException {
+		Instrument instrument = omsServiceDao.getInstrument(symbol);
+		if (instrument != null) {
+			return omsServiceDao.getLatestOrder(instrument.getId());
+		}
+		throw new OMSException("Instrument does not exist for Symbol :" + symbol);
+	}
+
+	@Override
+	public Order getEarliestOrder(String symbol) throws OMSException {
+		Instrument instrument = omsServiceDao.getInstrument(symbol);
+		if (instrument != null) {
+			return omsServiceDao.getEarliestOrder(instrument.getId());
+		}
+		throw new OMSException("Instrument does not exist for Symbol :" + symbol);
 	}
 
 }

@@ -26,4 +26,12 @@ public interface OMSService {
 	Order getOrder(long orderId) throws OMSException;
 
 	void printAllStatistics(String symbol);
+
+	Order getBiggestOrder(String symbol) throws OMSException;
+
+	Order getSmallestOrder(String symbol) throws OMSException;
+
+	Order getLatestOrder(String symbol) throws OMSException;
+
+	Order getEarliestOrder(String symbol) throws OMSException;
 }
