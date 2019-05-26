@@ -213,6 +213,13 @@ public class OMSServiceTest {
 		assertFalse(isSuccess);
 	}
 
+	@Test
+	public void test9() {
+		omsService.printAllStatistics("IBM.N");
+		omsService.printAllStatistics("UBER.N");
+		omsService.printAllStatistics("APPL.N");
+	}
+
 	@AfterClass
 	public static void stop() {
 		try {

@@ -235,48 +235,53 @@ public class OMSServiceImpl implements OMSService {
 		Instrument instrument = omsServiceDao.getInstrument(symbol);
 		if (instrument != null) {
 			long instrumentId = instrument.getId();
+
 			logger.info("--------------------------------------");
-			long validOrderQty = getValidOrderQuantity(instrumentId);
-			long invalidOrderQty = getInvalidOrderQuantity(instrumentId);
-			long totalExecutedOty = getValidExecutedQuantity(instrumentId);
-			Order latestOrder = null;
-			Order biggestOrder = null;
-			Order smallestOrder = null;
-			Order earliestOrder = null;
-			Optional<Order> optional = getLatestOrder(instrumentId);
+			OrderBook orderBook = omsServiceDao.getOrderBook(instrumentId);
+			logger.info("Order Book :" + orderBook);
+			if (orderBook != null) {
+				long validOrderQty = getValidOrderQuantity(instrumentId);
+				long invalidOrderQty = getInvalidOrderQuantity(instrumentId);
+				long totalExecutedOty = getValidExecutedQuantity(instrumentId);
+				Order latestOrder = null;
+				Order biggestOrder = null;
+				Order smallestOrder = null;
+				Order earliestOrder = null;
+				Optional<Order> optional = getLatestOrder(instrumentId);
 
-			if (optional.isPresent()) {
-				latestOrder = optional.get();
+				if (optional.isPresent()) {
+					latestOrder = optional.get();
+				}
+
+				optional = getEarliestOrder(instrumentId);
+				if (optional.isPresent()) {
+					earliestOrder = optional.get();
+				}
+
+				optional = getBiggestOrder(instrumentId);
+				if (optional.isPresent()) {
+					biggestOrder = optional.get();
+				}
+
+				optional = getSmallestOrder(instrumentId);
+				if (optional.isPresent()) {
+					smallestOrder = optional.get();
+				}
+
+				logger.info("Valid Executed Qty :" + totalExecutedOty);
+				logger.info("Valid Order Qty :" + validOrderQty);
+				logger.info("Invalid Order Qty :" + invalidOrderQty);
+				logger.info("Latest Order :" + latestOrder);
+				logger.info("Earliest Order :" + earliestOrder);
+				logger.info("Biggest Order :" + biggestOrder);
+				logger.info("Smallest Order :" + smallestOrder);
+
+				Map<BigDecimal, Long> map = getDemandStatisctics(instrumentId);
+				logger.info("Demand Statisctics");
+				map.entrySet().stream().forEach(e -> {
+					logger.info("Price :" + e.getKey() + " Qty :" + e.getValue());
+				});
 			}
-
-			optional = getEarliestOrder(instrumentId);
-			if (optional.isPresent()) {
-				earliestOrder = optional.get();
-			}
-
-			optional = getBiggestOrder(instrumentId);
-			if (optional.isPresent()) {
-				biggestOrder = optional.get();
-			}
-
-			optional = getSmallestOrder(instrumentId);
-			if (optional.isPresent()) {
-				smallestOrder = optional.get();
-			}
-			logger.info("Order Book :" + omsServiceDao.getOrderBook(instrumentId));
-			logger.info("Valid Executed Qty :" + totalExecutedOty);
-			logger.info("Valid Order Qty :" + validOrderQty);
-			logger.info("Invalid Order Qty :" + invalidOrderQty);
-			logger.info("Latest Order :" + latestOrder);
-			logger.info("Earliest Order :" + earliestOrder);
-			logger.info("Biggest Order :" + biggestOrder);
-			logger.info("Smallest Order :" + smallestOrder);
-
-			Map<BigDecimal, Long> map = getDemandStatisctics(instrumentId);
-			logger.info("Demand Statisctics");
-			map.entrySet().stream().forEach(e -> {
-				logger.info("Price :" + e.getKey() + " Qty :" + e.getValue());
-			});
 
 		} else {
 			logger.error("No Instrument Exists for Symbol:" + symbol);
